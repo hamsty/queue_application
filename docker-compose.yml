@@ -1,0 +1,6 @@
+services:
+  server:
+    image: queue-application:latest
+  client:
+    image: queue-application:latest
+
