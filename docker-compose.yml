@@ -1,6 +1,29 @@
 services:
   server:
     image: queue-application:latest
+    stdin_open: true
+    tty: true
+    entrypoint:
+      - python3
+      - -m
+      - qapp.queue_server
+    networks:
+      app_net:
+        ipv4_address: 172.16.238.10
+
   client:
     image: queue-application:latest
-
+    stdin_open: true
+    tty: true
+    networks:
+      app_net:
+        ipv4_address: 172.16.238.11
+networks:
+  app_net:
+    driver: bridge
+    enable_ipv6: true
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/24
+          gateway: 172.16.238.1

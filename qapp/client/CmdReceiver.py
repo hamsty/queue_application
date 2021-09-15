@@ -6,11 +6,13 @@ class CmdReceiver(LineReceiver):
     delimiter = b'\n'
     c = None
 
+    def __init__(self, protocol):
+        super().__init__()
+        self.protocol = protocol
+
     def connectionMade(self):
         self.transport.write(CliCmd.intro.encode("utf_8"))
-        self.transport.write(b">>> ")
-        self.c = CliCmd()
+        self.c = CliCmd(self.protocol)
 
     def lineReceived(self, line):
         self.c.onecmd(line.decode("utf_8"))
-        self.transport.write(b">>> ")

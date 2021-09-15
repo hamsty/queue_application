@@ -1,10 +1,12 @@
 import cmd
-from qapp.client.Communicate import Communicate
-from qapp.entities.Request import Request
 
 
 class CliCmd(cmd.Cmd):
-    intro = 'Welcome to the Queue Cli. Type help or ? to list commands.\n'
+    intro = 'Connected to Queue Server. Type help or ? to list commands.\n'
+
+    def __init__(self, protocol):
+        super().__init__()
+        self.protocol = protocol
 
     def do_call(self, arg):
         'Do call. Type call <id>'
@@ -15,8 +17,7 @@ class CliCmd(cmd.Cmd):
             if len(arg) > 1:
                 raise CliCmd.CmdException()
             id = int(arg[0])
-            json = Request("call",id)
-            print(json)
+            self.protocol.sendMessage("call", id)
         except (CliCmd.CmdException, ValueError):
             self.onecmd("help call")
 
@@ -29,8 +30,7 @@ class CliCmd(cmd.Cmd):
             if len(arg) > 1:
                 raise CliCmd.CmdException()
             id = str(arg[0])
-            json = Request("answer", id)
-            print(json)
+            self.protocol.sendMessage("answer", id)
         except (CliCmd.CmdException, ValueError):
             self.onecmd("help answer")
 
@@ -43,8 +43,7 @@ class CliCmd(cmd.Cmd):
             if len(arg) > 1:
                 raise CliCmd.CmdException()
             id = str(arg[0])
-            json = Request("reject", id)
-            print(json)
+            self.protocol.sendMessage("reject", id)
         except (CliCmd.CmdException, ValueError):
             self.onecmd("help reject")
 
@@ -57,8 +56,7 @@ class CliCmd(cmd.Cmd):
             if len(arg) > 1:
                 raise CliCmd.CmdException()
             id = int(arg[0])
-            json = Request("hangup", id)
-            print(json)
+            self.protocol.sendMessage("hangup", id)
         except (CliCmd.CmdException, ValueError):
             self.onecmd("help hangup")
 
