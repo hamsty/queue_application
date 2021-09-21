@@ -1,8 +1,6 @@
 services:
   server:
     image: hamsty/queue-application:latest
-    stdin_open: true
-    tty: true
     entrypoint:
       - queue_server
     networks:
@@ -11,7 +9,6 @@ services:
 
   client:
     image: hamsty/queue-application:latest
-    stdin_open: true
     tty: true
     networks:
       app_net:
