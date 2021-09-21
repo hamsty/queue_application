@@ -1,6 +1,6 @@
 services:
   server:
-    image: queue-application:latest
+    image: hamsty/queue-application:latest
     stdin_open: true
     tty: true
     entrypoint:
@@ -12,7 +12,7 @@ services:
         ipv4_address: 172.16.238.10
 
   client:
-    image: queue-application:latest
+    image: hamsty/queue-application:latest
     stdin_open: true
     tty: true
     networks:
