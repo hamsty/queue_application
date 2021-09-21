@@ -13,6 +13,7 @@ class Communicate(Protocol):
 
     def dataReceived(self, data: bytes):
         request = Request.get_object(data)
+        print(request)
         self.cmd.onecmd("{} {}".format(request.command, request.id))
 
 

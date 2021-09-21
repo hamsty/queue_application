@@ -22,6 +22,7 @@ class CliCmd(cmd.Cmd):
         except (CliCmd.CmdException, ValueError):
             self.onecmd("help call")
 
+
     def do_answer(self, arg):
         'Do answer. Type answer <id>'
         try:

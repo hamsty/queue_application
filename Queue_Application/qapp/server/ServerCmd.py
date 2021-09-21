@@ -5,27 +5,7 @@ from qapp.entities.Operator import Operator, STATE
 from twisted.internet import reactor
 
 
-class Watchdog:
 
-    is_on = False
-
-    def start(self, response, op, cmd, protocol):
-        self.call = reactor.callLater(10,self.timeout, response, op, cmd, protocol)
-        self.is_on = True
-
-    def stop(self):
-        if self.is_on:
-            self.call.cancel()
-            self.is_on = False
-
-
-    def timeout(self, response, op, cmd, protocol):
-        protocol.sendMessage(response)
-        op.set_state(STATE.AVAILABLE)
-        call_id = op.get_call_id()
-        op.set_call_id(None)
-        cmd.onecmd("recall {}".format(call_id))
-        op.set_state(STATE.AVAILABLE)
 
 
 class ServerCmd(cmd.Cmd):
@@ -41,7 +21,14 @@ class ServerCmd(cmd.Cmd):
                 op = Operator(operator["id"])
                 self.operators.append(op)
         self.protocol = protocol
-        self.watchdog = Watchdog()
+
+    def timeout(self, response, op):
+        self.protocol.sendMessage(response)
+        op.set_state(STATE.AVAILABLE)
+        call_id = op.get_call_id()
+        op.set_call_id(None)
+        self.onecmd("recall {}".format(call_id))
+        op.set_state(STATE.AVAILABLE)
 
     def do_recall(self, arg):
         try:
@@ -63,7 +50,7 @@ class ServerCmd(cmd.Cmd):
                 response = "Call {} ringing for operator {}".format(id, op.get_id())
                 self.protocol.sendMessage(response)
                 response = "Call {} ignored by operator {}".format(id, op.get_id())
-                self.watchdog.start(response, op, self, self.protocol)
+                op.timeout = reactor.callLater(10,self.timeout, response, op)
                 return True
         self.queue_calls.put(id)
         self.queue_count += 1
@@ -95,9 +82,12 @@ class ServerCmd(cmd.Cmd):
             if len(arg) > 1:
                 raise ServerCmd.CmdException()
             id = str(arg[0])
-            self.watchdog.stop()
+
             for op in self.operators:
                 if op.get_id() == id:
+                    if op.timeout is not None:
+                        op.timeout.cancel()
+                        op.timeout = None
                     if op.get_state() == STATE.RINGING:
                         op.set_state(STATE.BUSY)
                         response = "Call {} answered by operator {}".format(op.get_call_id(), op.get_id())
@@ -124,9 +114,11 @@ class ServerCmd(cmd.Cmd):
             if len(arg) > 1:
                 raise ServerCmd.CmdException()
             id = str(arg[0])
-            self.watchdog.stop()
             for op in self.operators:
                 if op.get_id() == id:
+                    if op.timeout is not None:
+                        op.timeout.cancel()
+                        op.timeout = None
                     if op.get_state() == STATE.RINGING:
                         op.set_state(STATE.AVAILABLE)
                         call_id = op.get_call_id()
@@ -156,9 +148,11 @@ class ServerCmd(cmd.Cmd):
             if len(arg) > 1:
                 raise ServerCmd.CmdException()
             id = int(arg[0])
-            self.watchdog.stop()
             for op in self.operators:
                 if op.get_call_id() == id:
+                    if op.timeout is not None:
+                        op.timeout.cancel()
+                        op.timeout = None
                     if op.get_state() == STATE.RINGING:
                         response = "Call {} missed".format(id)
                     else:

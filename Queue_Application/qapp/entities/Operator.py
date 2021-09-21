@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class STATE(Enum):
     AVAILABLE = 0
     RINGING = 1
@@ -12,6 +13,7 @@ class Operator:
         self._id = id
         self._state = STATE.AVAILABLE
         self._call_id = None
+        self.timeout = None
 
     def get_id(self):
         return self._id
@@ -25,7 +27,7 @@ class Operator:
     def get_call_id(self):
         return self._call_id
 
-    def set_call_id(self,call_id):
+    def set_call_id(self, call_id):
         self._call_id = call_id
 
     def __str__(self):
