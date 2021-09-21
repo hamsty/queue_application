@@ -4,9 +4,7 @@ services:
     stdin_open: true
     tty: true
     entrypoint:
-      - python3
-      - -m
-      - qapp.queue_server
+      - queue_server
     networks:
       app_net:
         ipv4_address: 172.16.238.10
