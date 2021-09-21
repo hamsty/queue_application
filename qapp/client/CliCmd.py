@@ -1,4 +1,5 @@
 import cmd
+from twisted.internet import reactor
 
 
 class CliCmd(cmd.Cmd):
@@ -57,6 +58,16 @@ class CliCmd(cmd.Cmd):
                 raise CliCmd.CmdException()
             id = int(arg[0])
             self.protocol.sendMessage("hangup", id)
+        except (CliCmd.CmdException, ValueError):
+            self.onecmd("help hangup")
+
+    def do_exit(self, arg):
+        'Do exit. Type exit'
+        try:
+            if not arg:
+                reactor.stop()
+            else:
+                raise CliCmd.CmdException()
         except (CliCmd.CmdException, ValueError):
             self.onecmd("help hangup")
 

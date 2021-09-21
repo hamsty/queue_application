@@ -5,6 +5,29 @@ from qapp.entities.Operator import Operator, STATE
 from twisted.internet import reactor
 
 
+class Watchdog:
+
+    is_on = False
+
+    def start(self, response, op, cmd, protocol):
+        self.call = reactor.callLater(10,self.timeout, response, op, cmd, protocol)
+        self.is_on = True
+
+    def stop(self):
+        if self.is_on:
+            self.call.cancel()
+            self.is_on = False
+
+
+    def timeout(self, response, op, cmd, protocol):
+        protocol.sendMessage(response)
+        op.set_state(STATE.AVAILABLE)
+        call_id = op.get_call_id()
+        op.set_call_id(None)
+        cmd.onecmd("recall {}".format(call_id))
+        op.set_state(STATE.AVAILABLE)
+
+
 class ServerCmd(cmd.Cmd):
 
     def __init__(self, protocol):
@@ -18,16 +41,7 @@ class ServerCmd(cmd.Cmd):
                 op = Operator(operator["id"])
                 self.operators.append(op)
         self.protocol = protocol
-
-    # def timeout(self, response, op):
-    #     if op.get_state() == STATE.RINGING:
-    #         self.protocol.sendMessage(response)
-    #         op.set_state(STATE.AVAILABLE)
-    #         call_id = op.get_call_id()
-    #         op.set_call_id(None)
-    #         self.onecmd("recall {}".format(call_id))
-    #         op.set_state(STATE.AVAILABLE)
-    #         print("batata")
+        self.watchdog = Watchdog()
 
     def do_recall(self, arg):
         try:
@@ -37,7 +51,7 @@ class ServerCmd(cmd.Cmd):
             if len(arg) > 1:
                 raise ServerCmd.CmdException()
             id = int(arg[0])
-            self.call(id)
+            reactor.callLater(1,self.call, id)
         except (ServerCmd.CmdException, ValueError):
             pass
 
@@ -47,14 +61,14 @@ class ServerCmd(cmd.Cmd):
                 op.set_state(STATE.RINGING)
                 op.set_call_id(id)
                 response = "Call {} ringing for operator {}".format(id, op.get_id())
-                reactor.callLater(0.25, self.protocol.sendMessage, response)
-                # response = "Call {} ignored by operator {}".format(id, op.get_id())
-                # reactor.callLater(10, self.timeout, response, op)
+                self.protocol.sendMessage(response)
+                response = "Call {} ignored by operator {}".format(id, op.get_id())
+                self.watchdog.start(response, op, self, self.protocol)
                 return True
         self.queue_calls.put(id)
         self.queue_count += 1
         response = "Call {} waiting in queue".format(id)
-        reactor.callLater(0.25, self.protocol.sendMessage, response)
+        self.protocol.sendMessage(response)
         return True
 
     def do_call(self, arg):
@@ -68,7 +82,7 @@ class ServerCmd(cmd.Cmd):
             id = int(arg[0])
             response = "Call {} received".format(id)
             self.protocol.sendMessage(response)
-            self.call(id)
+            reactor.callLater(1,self.call, id)
         except (ServerCmd.CmdException, ValueError):
             pass
 
@@ -81,6 +95,7 @@ class ServerCmd(cmd.Cmd):
             if len(arg) > 1:
                 raise ServerCmd.CmdException()
             id = str(arg[0])
+            self.watchdog.stop()
             for op in self.operators:
                 if op.get_id() == id:
                     if op.get_state() == STATE.RINGING:
@@ -109,6 +124,7 @@ class ServerCmd(cmd.Cmd):
             if len(arg) > 1:
                 raise ServerCmd.CmdException()
             id = str(arg[0])
+            self.watchdog.stop()
             for op in self.operators:
                 if op.get_id() == id:
                     if op.get_state() == STATE.RINGING:
@@ -140,6 +156,7 @@ class ServerCmd(cmd.Cmd):
             if len(arg) > 1:
                 raise ServerCmd.CmdException()
             id = int(arg[0])
+            self.watchdog.stop()
             for op in self.operators:
                 if op.get_call_id() == id:
                     if op.get_state() == STATE.RINGING:
